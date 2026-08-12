@@ -15,13 +15,24 @@ if (-not (Test-Path $BaseManifest)) {
 $OverlayTarget = Join-Path $TargetPath "deploy/overlays/block-04-ingress"
 $RouteTarget = Join-Path $TargetPath "apps/dashboard/server/routes"
 $PageTarget = Join-Path $TargetPath "apps/dashboard/pages/index.vue"
-$PageBackup = Join-Path $TargetPath "apps/dashboard/pages/index.block-03.vue"
+$BackupTarget = Join-Path $TargetPath ".block-backups"
+$PageBackup = Join-Path $BackupTarget "dashboard-index.block-03.vue"
+$LegacyBackup = Join-Path $TargetPath "apps/dashboard/pages/index.block-03.vue"
 
 New-Item -ItemType Directory -Force -Path $OverlayTarget | Out-Null
 New-Item -ItemType Directory -Force -Path $RouteTarget | Out-Null
+New-Item -ItemType Directory -Force -Path $BackupTarget | Out-Null
 
 Copy-Item -Recurse -Force (Join-Path $Source "deploy/overlays/block-04-ingress/*") $OverlayTarget
 Copy-Item -Force (Join-Path $Source "apps/dashboard/server/routes/ui-instance.get.ts") $RouteTarget
+
+if (Test-Path $LegacyBackup) {
+    if (-not (Test-Path $PageBackup)) {
+        Move-Item $LegacyBackup $PageBackup
+    } else {
+        Remove-Item $LegacyBackup
+    }
+}
 
 if ((Test-Path $PageTarget) -and -not (Test-Path $PageBackup)) {
     Copy-Item $PageTarget $PageBackup

@@ -24,7 +24,7 @@ macOS, Linux, Git Bash oder WSL:
 ../vsc-dispatch-city-04-ingress/install.sh .
 ```
 
-Das Skript sichert die bisherige Dashboard-Seite einmalig als `index.block-03.vue`.
+Das Skript sichert die bisherige Dashboard-Seite einmalig unter `.block-backups/dashboard-index.block-03.vue`.
 
 ## 2. Dashboard neu bauen und deployen
 
@@ -67,13 +67,13 @@ Danach sind Dashboard und API ueber denselben Einstiegspunkt erreichbar:
 PowerShell:
 
 ```powershell
-1..12 | ForEach-Object { (Invoke-RestMethod http://localhost:8080/ui-instance).instance }
+1..20 | ForEach-Object { (Invoke-RestMethod -Headers @{ Connection = "close" } http://localhost:8080/ui-instance).instance } | Sort-Object -Unique
 ```
 
 macOS, Linux, Git Bash oder WSL:
 
 ```bash
-for i in $(seq 1 12); do curl -s http://localhost:8080/ui-instance; echo; done
+for i in $(seq 1 20); do curl -s -H 'Connection: close' http://localhost:8080/ui-instance; echo; done | sort -u
 ```
 
 Erwartetes Resultat: In der Ausgabe erscheinen die Namen beider Dashboard-Pods.

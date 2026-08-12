@@ -11,12 +11,24 @@ fi
 
 mkdir -p "$TARGET_DIR/deploy/overlays/block-04-ingress"
 mkdir -p "$TARGET_DIR/apps/dashboard/server/routes"
+mkdir -p "$TARGET_DIR/.block-backups"
 
 cp -R "$SOURCE_DIR/deploy/overlays/block-04-ingress/." "$TARGET_DIR/deploy/overlays/block-04-ingress/"
 cp "$SOURCE_DIR/apps/dashboard/server/routes/ui-instance.get.ts" "$TARGET_DIR/apps/dashboard/server/routes/"
 
-if [ -f "$TARGET_DIR/apps/dashboard/pages/index.vue" ] && [ ! -f "$TARGET_DIR/apps/dashboard/pages/index.block-03.vue" ]; then
-  cp "$TARGET_DIR/apps/dashboard/pages/index.vue" "$TARGET_DIR/apps/dashboard/pages/index.block-03.vue"
+PAGE_BACKUP="$TARGET_DIR/.block-backups/dashboard-index.block-03.vue"
+LEGACY_BACKUP="$TARGET_DIR/apps/dashboard/pages/index.block-03.vue"
+
+if [ -f "$LEGACY_BACKUP" ]; then
+  if [ ! -f "$PAGE_BACKUP" ]; then
+    mv "$LEGACY_BACKUP" "$PAGE_BACKUP"
+  else
+    rm "$LEGACY_BACKUP"
+  fi
+fi
+
+if [ -f "$TARGET_DIR/apps/dashboard/pages/index.vue" ] && [ ! -f "$PAGE_BACKUP" ]; then
+  cp "$TARGET_DIR/apps/dashboard/pages/index.vue" "$PAGE_BACKUP"
 fi
 cp "$SOURCE_DIR/apps/dashboard/pages/index.vue" "$TARGET_DIR/apps/dashboard/pages/index.vue"
 
