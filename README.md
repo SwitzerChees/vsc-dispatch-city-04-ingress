@@ -1,30 +1,79 @@
 # Block 4 - Ingress und Load Balancing
 
-Dieser kleine Integrationsbaustein setzt auf dem Stand aus Block 3 auf. Er liefert gemeinsames HTTP-Routing fuer Dashboard und API sowie eine sichtbare Dashboard-Instanzkennung.
+Dieser Baustein erweitert den eigenen Projektstand aus Block 3. Er liefert:
 
-## Verwendung im Kurs
+- ein Traefik-Ingress fuer einen gemeinsamen HTTP-Einstiegspunkt,
+- zwei Dashboard-Replikas fuer sichtbares Load Balancing,
+- den Endpunkt `/ui-instance` zur Anzeige des antwortenden Dashboard-Pods.
 
-- Privates Integrationspaket fuer das bestehende Studierenden-Repository
-- Kein neues Abgabe-Repository: Die Aenderungen werden in den fortlaufenden Projektstand uebernommen
-- Fuer einen reproduzierbaren Stand ist der Release `v1.0.0` zu verwenden
+Die `control-api` bleibt bei einer Replik, weil ihr Zustand in Block 4 noch im Speicher liegt.
 
-## Enthalten
+## 1. Baustein uebernehmen
 
-- `deploy/overlays/block-04-ingress`: Traefik-Ingress und Skalierung des Dashboards auf zwei Replikas
-- `apps/dashboard/server/routes/ui-instance.get.ts`: liefert den aktuellen Podnamen
-- `apps/dashboard/pages/index.vue`: zeigt die bedienende Instanz im Kopf des Dashboards
+Fuehren Sie das Installationsskript aus Ihrem eigenen Projekt-Repository aus. Der Pfad zum Baustein kann bei Ihnen abweichen.
 
-## Arbeitsauftrag
+PowerShell:
 
-1. Die Dateien in das eigene System-Repository integrieren; `index.vue` bei eigenen Aenderungen zusammenfuehren.
-2. Pfadregeln fuer `/`, `/api`, `/health` und `/metrics` erklaeren und testen.
-3. Den Unterschied zwischen Service-Load-Balancing und Ingress-Routing nachweisen.
-4. Mehrfach `/ui-instance` abrufen und die Verteilung auf zwei Dashboard-Pods beobachten.
-5. Einen Dashboard-Pod waehrend laufender Requests entfernen.
-
-```bash
-kubectl --context k3d-delivery-lab apply -k deploy/overlays/block-04-ingress
-curl http://localhost:8080/ui-instance
+```powershell
+..\vsc-dispatch-city-04-ingress\install.ps1 -Target .
 ```
 
-Abnahme: Das Gesamtsystem ist unter einer URL erreichbar und beide Dashboard-Replikas bedienen Requests.
+macOS, Linux, Git Bash oder WSL:
+
+```bash
+../vsc-dispatch-city-04-ingress/install.sh .
+```
+
+Das Skript sichert die bisherige Dashboard-Seite einmalig als `index.block-03.vue`.
+
+## 2. Dashboard neu bauen und deployen
+
+PowerShell:
+
+```powershell
+docker build -t food-delivery-dashboard:local .\apps\dashboard
+k3d image import -c teko-k8s food-delivery-dashboard:local
+kubectl apply -k .\deploy\overlays\block-04-ingress
+kubectl -n food-delivery rollout restart deployment/dashboard
+kubectl -n food-delivery rollout status deployment/dashboard
+```
+
+macOS, Linux, Git Bash oder WSL:
+
+```bash
+docker build -t food-delivery-dashboard:local ./apps/dashboard
+k3d image import -c teko-k8s food-delivery-dashboard:local
+kubectl apply -k ./deploy/overlays/block-04-ingress
+kubectl -n food-delivery rollout restart deployment/dashboard
+kubectl -n food-delivery rollout status deployment/dashboard
+```
+
+## 3. Traefik lokal oeffnen
+
+Der Cluster aus Block 2 besitzt keine feste Host-Port-Zuordnung. Deshalb wird der bereits installierte Traefik-Service lokal weitergeleitet:
+
+```powershell
+kubectl -n kube-system port-forward service/traefik 8080:80
+```
+
+Danach sind Dashboard und API ueber denselben Einstiegspunkt erreichbar:
+
+- Dashboard: `http://localhost:8080/`
+- Snapshot: `http://localhost:8080/api/v1/snapshot`
+- Readiness: `http://localhost:8080/health/ready`
+
+## 4. Load Balancing sichtbar machen
+
+PowerShell:
+
+```powershell
+1..12 | ForEach-Object { (Invoke-RestMethod http://localhost:8080/ui-instance).instance }
+```
+
+macOS, Linux, Git Bash oder WSL:
+
+```bash
+for i in $(seq 1 12); do curl -s http://localhost:8080/ui-instance; echo; done
+```
+
+Erwartetes Resultat: In der Ausgabe erscheinen die Namen beider Dashboard-Pods.
